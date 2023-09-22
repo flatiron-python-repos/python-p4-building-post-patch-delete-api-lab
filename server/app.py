@@ -30,17 +30,28 @@ def bakeries():
     )
     return response
 
-@app.route('/bakeries/<int:id>')
+@app.route('/bakeries/<int:id>', methods=["GET", "PATCH"])
 def bakery_by_id(id):
-
     bakery = Bakery.query.filter_by(id=id).first()
-    bakery_serialized = bakery.to_dict()
 
-    response = make_response(
-        bakery_serialized,
-        200
-    )
-    return response
+    if(request.method == "GET"):
+        bakery_serialized = bakery.to_dict()
+
+        response = make_response(
+            bakery_serialized,
+            200
+        )
+        return response
+    else:
+        bakery.name = request.form.get("name")
+
+        db.session.commit()
+
+        return jsonify({
+            "id": bakery.id,
+            "name": bakery.name
+        }), 200
+
 
 @app.route('/baked_goods/by_price')
 def baked_goods_by_price():
@@ -65,6 +76,38 @@ def most_expensive_baked_good():
         200
     )
     return response
+
+@app.route('/baked_goods', methods=['POST'])
+def create_baked_good():
+    # data = request.get_json()
+    new_baked_good = BakedGood(
+        name = request.form.get('name'),
+        price = request.form.get('price'),
+        bakery_id = request.form.get('bakery_id')
+    )
+
+    db.session.add(new_baked_good)
+    db.session.commit()
+
+    return jsonify({
+        "id": new_baked_good.id,
+        "name": new_baked_good.name,
+        "price": new_baked_good.price,
+        "bakery_id": new_baked_good.bakery_id
+    }), 201
+
+@app.route('/baked_goods/<int:id>', methods=['DELETE'])
+def delete_baked_good(id):
+    # data = request.get_json()
+    bake_to_delete = BakedGood.query.filter_by(id = id).first_or_404()
+
+    db.session.delete(bake_to_delete)
+    db.session.commit()
+
+    return jsonify({
+        "message": "User deleted successfully"
+    }), 200
+
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
